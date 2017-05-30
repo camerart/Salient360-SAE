@@ -1,48 +1,45 @@
-% %=========================================================
-% %=========================================================
-% % Author: Chen Xia, Hao Lee, Chunhuan Lin, Zhaohui Xia
-% % Create date: 2017-05-23
-% %=========================================================
-% %=========================================================
+%% HeadSalMap.m ---
+%
+% Filename: HeadSalMap.m
+% Author: Fred Qi
+% Created: 2013-05-30 11:13:19(+0800)
+%
+% Last-Updated: 2017-05-30 14:12:19(+0800) [by Fred Qi]
+%     Update #: 44
+%=====================================================================
+%% Commentary:
+%  imgIn: the input equirectangular image organised in an RGB, 
+%         with size(imgIn) being [Height,Width,3].
+%  matOut: the output “double” matrix having the saliency values.
+%          Its size is [Height,Width]
+%
+%=====================================================================
+%% Change Log:
+%  - Originaly created by Chen XIA
+%  - Revised by Hao LEE
+%  - Revised for ICME 2017 GC: Salient 360!
+%    + Chunhuan LIN
+%    + Zhaohui XIA
+%    + Fred QI
+%
+%=====================================================================
 
-function HeadEyeSalMaps(img_path, out_path)
+function [matOut] = HeadSalMap(imgIn)
 
-% This code predict the saliency maps of the Salient360!
+% disp('Predicting HeadSalMap...');
 
-% img_path : The root folder where all images are stored. It should end with '\'.
-% out_path: The root floder where you want to store the output saliency maps. It should end with '\'.
-
-disp('================ Predicting HeadEyeSalMaps... =================')
-% img_path = input('please input the directory of the images: ','s');
-Files = dir(fullfile(img_path,'*.jpg'));
-LengthFiles = length(Files);
-
-% test out_path
-
-if LengthFiles == 0
-    error('Please input correct path!')   
-elseif ~exist(out_path)
-    disp(['Making the directory ', out_path, ' to store the outputs.'])
-    mkdir(out_path)
-else
-    disp('This may take a few minutes. Please wait for it...')
-end
-
-for number = 1:LengthFiles
-% Read in the image
-equi = imread(strcat(img_path,Files(number).name));
-[input_h,input_w,~] = size(equi);
-
+[input_h,input_w,~] = size(imgIn);
 if input_h*2 == input_w
-    
+    equi = imgIn;
 else
-    equi = imresize(equi, [input_h, input_h*2]);
+    % disp('resizing...');
+    equi = imresize(imgIn, [input_h, input_h*2]);
 end
 
 % create cubic images
-cubic = equi2cubic(equi);
+cubic = equi2cubic(imgIn);
 
-% % Show the cube faces 
+% Show the cube faces 
 % figure;
 % for idx = 1 : 6
 %     % Show image in figure and name the face
@@ -59,12 +56,13 @@ cubic = equi2cubic(equi);
 % imwrite(restore, 'restored_image.jpg')
 % title('restored image')
 
-center = horzcat(cubic{1:6});
-% addpath('/home/shenchong/work/saliency');
-R = 7;
-r = 3;
+center = horzcat(cubic{1:4});
+
+% addpath('D:/godqi_sal360-master');
+R = 15;
+r = 7;
 num = 10;
-each_image_patches = 8000;
+each_image_patches = 200;
 batchsize = 100;
 
 maxepoch = 100;
@@ -104,7 +102,7 @@ targets_data = zeros(each_image_patches, cen_patch_size.^2*3);
 img = double(center);
 [row_s,col_s,~] = size(img);
 img = imresize(img, 128/min(size(img, 1),size(img, 2)),'bilinear');
-img = double(func_color_opponent_trans(img));
+img = double(func_rgb2opponent(img));
 [row,col,~] = size(img);
     
 row_bg = floor(row*0.4);
@@ -557,7 +555,7 @@ targets_data = targets_data/255;
     saliency_map_ = double( ( saliency_map_ - min(saliency_map_(:)) ) / ( max(saliency_map_(:)) - min(saliency_map_(:)) ) * 255 );
     saliency_s = saliency_map_;
     saliency_s = imresize(saliency_s,[row_s,col_s],'bicubic');
-   % imwrite(mat2gray(saliency_s),sprintf('./result/center_%d_%d_%d_%d_normlization.jpg',k,each_image_patches,R,r));
+    %imwrite(mat2gray(saliency_s),sprintf('./result/center_%d_%d_%d_%d_normlization.jpg',k,each_image_patches,R,r));
 
     
 %% ...    
@@ -566,20 +564,21 @@ targets_data = targets_data/255;
 
 %% 4. Restore the cubic images to equirectangular image
 w = 128;
-
-sal2rgb = zeros(w, w*6, 3);
+top = zeros(w, w, 3);
+bottom = zeros(w, w, 3);
+sal2rgb = zeros(w, w*4, 3);
 sal2rgb(:, :, 1) = saliency_map_;
 sal2rgb(:, :, 2) = saliency_map_;
 sal2rgb(:, :, 3) = saliency_map_;
 saliency_map_ = sal2rgb;
-saliency_map_ = cubic2equi(saliency_map_(:,4*w+1:5*w, :), saliency_map_(:,5*w+1:6*w, :), saliency_map_(:,3*w+1:4*w, :), saliency_map_(:,w+1:2*w, :), saliency_map_(:,1:w, :), saliency_map_(:,2*w+1:3*w, :));
+saliency_map_ = cubic2equi(top, bottom, saliency_map_(:,3*w+1:4*w, :), saliency_map_(:,w+1:2*w, :), saliency_map_(:,1:w, :), saliency_map_(:,2*w+1:3*w, :));
 saliency_map_ = saliency_map_(:, :, 1);
 [r,c,~] = size(saliency_map_);
 
 saliency_map_ = imresize(saliency_map_,[r, c]);
 saliency_map_ = imresize(saliency_map_,[input_h, input_w]);
 
-% add blur
+% add center bias
 mapSize = size(saliency_map_);
 kSize = mapSize(2)*0.04;
 saliency_map_ = imfilter(saliency_map_, fspecial('gaussian', round([kSize, kSize]*2), kSize));
@@ -587,13 +586,17 @@ saliency_map_ = imfilter(saliency_map_, fspecial('gaussian', round([kSize, kSize
 % normalization
 saliency_map_ = double(saliency_map_-min(saliency_map_(:)));
 saliency_map_ = saliency_map_/sum(saliency_map_(:));
+matOut = saliency_map_;
 
 % figure;
 % imshow(mat2gray(saliency_map_))
-name = strtok(Files(number).name,'.');
-imwrite(mat2gray(saliency_map_), sprintf('%sSHE_%s.jpg',out_path,name));
-save(sprintf('%sSHE_%s.mat', out_path, name), 'saliency_map_');
-fid = fopen(sprintf('%sSHE_%s.bin',out_path, name),'wb');
-fwrite(fid,'saliency_map_','double');
-disp(['Finishing ', Files(number).name])
-end
+% $$$ name = strtok(Files(number).name,'.');
+% $$$ imwrite(mat2gray(saliency_map_), sprintf('%sSH_%s.jpg',out_path,name));
+% $$$ save(sprintf('%sSH_%s.mat', out_path, name), 'saliency_map_');
+% $$$ fid = fopen(sprintf('%sSH_%s.bin',out_path, name),'wb');
+% $$$ fwrite(fid,'saliency_map_','double');
+% $$$ disp(['Finishing ', Files(number).name])
+% $$$ end
+
+%=====================================================================
+% HeadSalMap.m ends here

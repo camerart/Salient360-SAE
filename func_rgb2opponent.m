@@ -1,4 +1,4 @@
-function img_oppo = func_color_opponent_trans(img_in)
+function img_oppo = func_rgb2opponent(img_in)
 
 % transform the RGB space to opponent space
 
