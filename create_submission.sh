@@ -5,8 +5,8 @@
 ## Author: Fred Qi
 ## Created: 2017-05-30 15:35:46(+0800)
 ##
-## Last-Updated: 2017-05-30 15:45:23(+0800) [by Fred Qi]
-##     Update #: 17
+## Last-Updated: 2017-05-30 16:12:06(+0800) [by Fred Qi]
+##     Update #: 18
 ######################################################################
 ##
 ### Commentary:
@@ -19,7 +19,7 @@
 ##
 ######################################################################
 
-folder="Salient360_XDQS"
+folder="Salient360_xd_qsal"
 [ -d ${folder} ] && rm -r ${folder}
 
 mkdir ${folder}
