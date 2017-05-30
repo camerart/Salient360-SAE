@@ -44,17 +44,17 @@ cubic = equi2cubic(imgIn);
 center = horzcat(cubic{1:4});
 
 
-R = 15;
-r = 7;
+R = 7;
+r = 3;
 num = 10;
-each_image_patches = 200;
+each_image_patches = 8000;
 batchsize = 100;
 
 
 
 maxepoch_bp = 10;
 
-numhid1 = 512; numpen = 256; numpen2 = 128; numpen3 = 64; numopen = 16;
+numhid1 = 256; numpen = 128; numpen2 = 64; numpen3 = 32; numopen = 8;
 
 %parfor img_idx = 1:120
     
@@ -338,7 +338,7 @@ saliency_map_ = saliency_map_/sum(saliency_map_(:));
 matOut = saliency_map_;
 
 % figure;
-% imshow(mat2gray(saliency_map_))
+% $$$imshow(mat2gray(saliency_map_))
 % $$$ name = strtok(Files(number).name,'.');
 % $$$ imwrite(mat2gray(saliency_map_), sprintf('%sSH_%s.jpg',out_path,name));
 % $$$ save(sprintf('%sSH_%s.mat', out_path, name), 'saliency_map_');
