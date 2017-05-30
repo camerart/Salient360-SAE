@@ -1,0 +1,10 @@
+# compressed files
+*.gz
+*.rar
+
+# pandoc Generated files
+*.html
+
+# folders
+images/
+saliency/
