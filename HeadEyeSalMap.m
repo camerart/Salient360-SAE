@@ -4,14 +4,14 @@
 % Author: Fred Qi
 % Created: 2013-04-30 12:39:31(+0800)
 %
-% Last-Updated: 2017-05-30 12:52:39(+0800) [by Fred Qi]
-%     Update #: 15
+% Last-Updated: 2017-05-31 11:25:53(+0800) [by Fred Qi]
+%     Update #: 32
 %
 %=====================================================================
 %% Commentary:
 %  imgIn: the input equirectangular image organised in an RGB, 
 %         with size(imgIn) being [Height,Width,3].
-%  matOut: the output “double” matrix having the saliency values.
+%  matOut: the output "double" matrix having the saliency values.
 %          Its size is [Height,Width]
 %
 %=====================================================================
@@ -39,65 +39,22 @@ end
 
 % create cubic images
 cubic = equi2cubic(equi);
-
-% % Show the cube faces 
-% figure;
-% for idx = 1 : 6
-%     % Show image in figure and name the face
-%     subplot(2,3,idx);
-%     imshow(cubic{idx});
-%     title('faces');
-%     % Write the image to disk
-%     % imwrite(out{idx}, names_to_save{idx});
-% end
-
-% restore = cubic2equi(cubic{5}, cubic{6}, cubic{4}, cubic{2}, cubic{1}, cubic{3});
-% figure;
-% imshow(restore);
-% imwrite(restore, 'restored_image.jpg')
-% title('restored image')
-
 center = horzcat(cubic{1:6});
-% addpath('/home/shenchong/work/saliency');
+
 R = 7;
 r = 3;
 num = 10;
 each_image_patches = 8000;
 batchsize = 100;
 
-maxepoch = 100;
-epsilonw      = 0.1;   % Learning rate for weights
-epsilonvb     = 0.1;   % Learning rate for biases of visible units
-epsilonhb     = 0.1;   % Learning rate for biases of hidden units
-weightcost    = 0.0002;
-initialmomentum  = 0.5;
-finalmomentum    = 0.9;
-
-
-epsilonw_l    = 0.001; % Learning rate for weights
-epsilonvb_l   = 0.001; % Learning rate for biases of visible units
-epsilonhb_l   = 0.001; % Learning rate for biases of hidden units
 
 maxepoch_bp = 10;
-
-numhid1 = 512; numpen = 256; numpen2 = 128; numpen3 = 64; numopen = 16;
-
-%parfor img_idx = 1:120
-    
+numhid1 = 512; numpen =256; numpen2 = 128; numpen3 = 64; numopen = 16;
 
 sur_patch_size = R*2+1;
 cen_patch_size = r*2+1;
 training_data = zeros(each_image_patches, sur_patch_size.^2*3);
 targets_data = zeros(each_image_patches, cen_patch_size.^2*3);
-    
-    % infilename = sprintf('Results_n3/%d+3.jpg', img_idx);
-    % img_exist = exist(infilename, 'file');
-    % if img_exist == 0
-    
-    % filename = sprintf('Bruce/%d.jpg', img_idx);
-    % filename = sprintf('/home/shenchong/work/saliency/Judd_all/%d.jpg', img_idx);
-	% filename = sprintf('Kootstra/%d.png', img_idx);
-	% filename = sprintf('NUSEF/%d.jpg', img_idx);
     
 img = double(center);
 [row_s,col_s,~] = size(img);
@@ -148,268 +105,16 @@ targets_data = targets_data/255;
     rand('state',sum(100*clock));
     randn('state',sum(100*clock));
     %%%%%%%%%%%%%%%%%%%%%%%%%%% end makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% rbm;
-    numhid = numhid1;
-    [numcases, numdims, numbatches] = size(batchdata);
-    vishid     = 0.1*randn(numdims, numhid);
-    hidbiases  = zeros(1,numhid);
-    visbiases  = zeros(1,numdims);
-    vishidinc  = zeros(numdims,numhid);
-    hidbiasinc = zeros(1,numhid);
-    visbiasinc = zeros(1,numdims);
-    batchposhidprobs = zeros(numcases,numhid,numbatches);
-    
-    for epoch = 1:maxepoch,
-        for batch = 1:numbatches,
-            %%%%%%%%% START POSITIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            data = batchdata(:,:,batch);
-            poshidprobs = 1./(1 + exp(-data*vishid - repmat(hidbiases,numcases,1)));
-            batchposhidprobs(:,:,batch)=poshidprobs;
-            posprods    = data' * poshidprobs;
-            poshidact   = sum(poshidprobs);
-            posvisact = sum(data);
-            %%%%%%%%% END OF POSITIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            poshidstates = poshidprobs > rand(numcases,numhid);
-            %%%%%%%%% START NEGATIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            negdata = 1./(1 + exp(-poshidstates*vishid' - repmat(visbiases,numcases,1)));
-            neghidprobs = 1./(1 + exp(-negdata*vishid - repmat(hidbiases,numcases,1)));
-            negprods  = negdata'*neghidprobs;
-            neghidact = sum(neghidprobs);
-            negvisact = sum(negdata);
-            %%%%%%%%% END OF NEGATIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            if epoch>5,
-                momentum=finalmomentum;
-            else
-                momentum=initialmomentum;
-            end;
-            %%%%%%%%% UPDATE WEIGHTS AND BIASES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            vishidinc = momentum*vishidinc + ...
-                epsilonw*( (posprods-negprods)/numcases - weightcost*vishid);
-            visbiasinc = momentum*visbiasinc + (epsilonvb/numcases)*(posvisact-negvisact);
-            hidbiasinc = momentum*hidbiasinc + (epsilonhb/numcases)*(poshidact-neghidact);
-            vishid = vishid + vishidinc;
-            visbiases = visbiases + visbiasinc;
-            hidbiases = hidbiases + hidbiasinc;
-            %%%%%%%%%%%%%%%% END OF UPDATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        end
-    end;
-    vishid1 = vishid; hidrecbiases = hidbiases; visbiases1 = visbiases;
-    
-    batchdata = batchposhidprobs;
-    numhid = numpen;
-    %% rbm;
-    [numcases, numdims, numbatches] = size(batchdata);
-    vishid     = 0.1*randn(numdims, numhid);
-    hidbiases  = zeros(1,numhid);
-    visbiases  = zeros(1,numdims);
-    vishidinc  = zeros(numdims,numhid);
-    hidbiasinc = zeros(1,numhid);
-    visbiasinc = zeros(1,numdims);
-    batchposhidprobs = zeros(numcases,numhid,numbatches);
-    
-    for epoch = 1:maxepoch,
-        for batch = 1:numbatches,
-            %%%%%%%%% START POSITIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            data = batchdata(:,:,batch);
-            poshidprobs = 1./(1 + exp(-data*vishid - repmat(hidbiases,numcases,1)));
-            batchposhidprobs(:,:,batch)=poshidprobs;
-            posprods    = data' * poshidprobs;
-            poshidact   = sum(poshidprobs);
-            posvisact = sum(data);
-            %%%%%%%%% END OF POSITIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            poshidstates = poshidprobs > rand(numcases,numhid);
-            %%%%%%%%% START NEGATIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            negdata = 1./(1 + exp(-poshidstates*vishid' - repmat(visbiases,numcases,1)));
-            neghidprobs = 1./(1 + exp(-negdata*vishid - repmat(hidbiases,numcases,1)));
-            negprods  = negdata'*neghidprobs;
-            neghidact = sum(neghidprobs);
-            negvisact = sum(negdata);
-            %%%%%%%%% END OF NEGATIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            if epoch>5,
-                momentum=finalmomentum;
-            else
-                momentum=initialmomentum;
-            end;
-            %%%%%%%%% UPDATE WEIGHTS AND BIASES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            vishidinc = momentum*vishidinc + ...
-                epsilonw*( (posprods-negprods)/numcases - weightcost*vishid);
-            visbiasinc = momentum*visbiasinc + (epsilonvb/numcases)*(posvisact-negvisact);
-            hidbiasinc = momentum*hidbiasinc + (epsilonhb/numcases)*(poshidact-neghidact);
-            vishid = vishid + vishidinc;
-            visbiases = visbiases + visbiasinc;
-            hidbiases = hidbiases + hidbiasinc;
-            %%%%%%%%%%%%%%%% END OF UPDATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        end
-    end;
-    
-    hidpen = vishid; penrecbiases = hidbiases; hidgenbiases = visbiases;
-    
-    batchdata = batchposhidprobs;
-    numhid = numpen2;
-    %% rbm;
-    [numcases, numdims, numbatches] = size(batchdata);
-    vishid     = 0.1*randn(numdims, numhid);
-    hidbiases  = zeros(1,numhid);
-    visbiases  = zeros(1,numdims);
-    vishidinc  = zeros(numdims,numhid);
-    hidbiasinc = zeros(1,numhid);
-    visbiasinc = zeros(1,numdims);
-    batchposhidprobs = zeros(numcases,numhid,numbatches);
-    
-    for epoch = 1:maxepoch,
-        for batch = 1:numbatches,
-            %%%%%%%%% START POSITIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            data = batchdata(:,:,batch);
-            poshidprobs = 1./(1 + exp(-data*vishid - repmat(hidbiases,numcases,1)));
-            batchposhidprobs(:,:,batch)=poshidprobs;
-            posprods    = data' * poshidprobs;
-            poshidact   = sum(poshidprobs);
-            posvisact = sum(data);
-            %%%%%%%%% END OF POSITIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            poshidstates = poshidprobs > rand(numcases,numhid);
-            %%%%%%%%% START NEGATIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            negdata = 1./(1 + exp(-poshidstates*vishid' - repmat(visbiases,numcases,1)));
-            neghidprobs = 1./(1 + exp(-negdata*vishid - repmat(hidbiases,numcases,1)));
-            negprods  = negdata'*neghidprobs;
-            neghidact = sum(neghidprobs);
-            negvisact = sum(negdata);
-            %%%%%%%%% END OF NEGATIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            if epoch>5,
-                momentum=finalmomentum;
-            else
-                momentum=initialmomentum;
-            end;
-            %%%%%%%%% UPDATE WEIGHTS AND BIASES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            vishidinc = momentum*vishidinc + ...
-                epsilonw*( (posprods-negprods)/numcases - weightcost*vishid);
-            visbiasinc = momentum*visbiasinc + (epsilonvb/numcases)*(posvisact-negvisact);
-            hidbiasinc = momentum*hidbiasinc + (epsilonhb/numcases)*(poshidact-neghidact);
-            vishid = vishid + vishidinc;
-            visbiases = visbiases + visbiasinc;
-            hidbiases = hidbiases + hidbiasinc;
-            %%%%%%%%%%%%%%%% END OF UPDATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        end
-    end;
-    hidpen2 = vishid; penrecbiases2 = hidbiases; hidgenbiases2 = visbiases;
-    % save mnisthp2 hidpen2 penrecbiases2 hidgenbiases2;
-    
-    % fprintf(1,'\nPretraining Layer 4 with RBM: %d-%d \n',numpen2,numpen3);
-    batchdata = batchposhidprobs;
-    numhid = numpen3;
-    %% rbm;
-    [numcases, numdims, numbatches] = size(batchdata);
-    vishid     = 0.1*randn(numdims, numhid);
-    hidbiases  = zeros(1,numhid);
-    visbiases  = zeros(1,numdims);
-    vishidinc  = zeros(numdims,numhid);
-    hidbiasinc = zeros(1,numhid);
-    visbiasinc = zeros(1,numdims);
-    batchposhidprobs = zeros(numcases,numhid,numbatches);
-    
-    for epoch = 1:maxepoch,
-        for batch = 1:numbatches,
-            %%%%%%%%% START POSITIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            data = batchdata(:,:,batch);
-            poshidprobs = 1./(1 + exp(-data*vishid - repmat(hidbiases,numcases,1)));
-            batchposhidprobs(:,:,batch)=poshidprobs;
-            posprods    = data' * poshidprobs;
-            poshidact   = sum(poshidprobs);
-            posvisact = sum(data);
-            %%%%%%%%% END OF POSITIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            poshidstates = poshidprobs > rand(numcases,numhid);
-            %%%%%%%%% START NEGATIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            negdata = 1./(1 + exp(-poshidstates*vishid' - repmat(visbiases,numcases,1)));
-            neghidprobs = 1./(1 + exp(-negdata*vishid - repmat(hidbiases,numcases,1)));
-            negprods  = negdata'*neghidprobs;
-            neghidact = sum(neghidprobs);
-            negvisact = sum(negdata);
-            %%%%%%%%% END OF NEGATIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            if epoch>5,
-                momentum=finalmomentum;
-            else
-                momentum=initialmomentum;
-            end;
-            %%%%%%%%% UPDATE WEIGHTS AND BIASES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            vishidinc = momentum*vishidinc + ...
-                epsilonw*( (posprods-negprods)/numcases - weightcost*vishid);
-            visbiasinc = momentum*visbiasinc + (epsilonvb/numcases)*(posvisact-negvisact);
-            hidbiasinc = momentum*hidbiasinc + (epsilonhb/numcases)*(poshidact-neghidact);
-            vishid = vishid + vishidinc;
-            visbiases = visbiases + visbiasinc;
-            hidbiases = hidbiases + hidbiasinc;
-            %%%%%%%%%%%%%%%% END OF UPDATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        end
-    end;
-    hidpen3 = vishid; penrecbiases3 = hidbiases; hidgenbiases3 = visbiases;
-    
-    batchdata = batchposhidprobs;
-    numhid = numopen;
+
+    %% RBM layerwise pretrain
+    [vishid1,hidrecbiases,visbiases1,batchposhidprobs] = rbm( numhid1, batchdata);
+    [hidpen,penrecbiases,hidgenbiases,batchposhidprobs] = rbm( numpen, batchposhidprobs);
+    [hidpen2,penrecbiases2,hidgenbiases2,batchposhidprobs] = rbm( numpen2, batchposhidprobs);
+    [hidpen3,penrecbiases3,hidgenbiases3,batchposhidprobs] = rbm( numpen3, batchposhidprobs);
     %% rbmhidlinear;
-    [numcases, numdims, numbatches] = size(batchdata);
-    vishid     = 0.1*randn(numdims, numhid);
-    hidbiases  = zeros(1,numhid);
-    visbiases  = zeros(1,numdims);
-    vishidinc  = zeros(numdims,numhid);
-    hidbiasinc = zeros(1,numhid);
-    visbiasinc = zeros(1,numdims);
-    sigmainc = zeros(1,numhid);
-    batchposhidprobs = zeros(numcases,numhid,numbatches);
-    for epoch = 1:maxepoch,
-        for batch = 1:numbatches,
-            %%%%%%%%% START POSITIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            data = batchdata(:,:,batch);
-            poshidprobs =  (data*vishid) + repmat(hidbiases,numcases,1);
-            batchposhidprobs(:,:,batch)=poshidprobs;
-            posprods    = data' * poshidprobs;
-            poshidact   = sum(poshidprobs);
-            posvisact = sum(data);
-            %%%%%%%%% END OF POSITIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            poshidstates = poshidprobs+randn(numcases,numhid);
-            %%%%%%%%% START NEGATIVE PHASE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            negdata = 1./(1 + exp(-poshidstates*vishid' - repmat(visbiases,numcases,1)));
-            neghidprobs = (negdata*vishid) + repmat(hidbiases,numcases,1);
-            negprods  = negdata'*neghidprobs;
-            neghidact = sum(neghidprobs);
-            negvisact = sum(negdata);
-            %%%%%%%%% END OF NEGATIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            if epoch>5,
-                momentum=finalmomentum;
-            else
-                momentum=initialmomentum;
-            end;
-            %%%%%%%%% UPDATE WEIGHTS AND BIASES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            vishidinc = momentum*vishidinc + ...
-                epsilonw_l*( (posprods-negprods)/numcases - weightcost*vishid);
-            visbiasinc = momentum*visbiasinc + (epsilonvb_l/numcases)*(posvisact-negvisact);
-            hidbiasinc = momentum*hidbiasinc + (epsilonhb_l/numcases)*(poshidact-neghidact);
-            vishid = vishid + vishidinc;
-            visbiases = visbiases + visbiasinc;
-            hidbiases = hidbiases + hidbiasinc;
-            %%%%%%%%%%%%%%%% END OF UPDATES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        end
-    end
-    hidtop = vishid; toprecbiases = hidbiases; topgenbiases = visbiases;
-    
-    %% backprop_cs;
-    %%%%%%%%%%%%%%%%%%%%%%%%%% begin makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%
-    % totnum = size(training_data,1);
-    rand('state',0);
-    randomorder = randperm(totnum);
-    numbatches = totnum/batchsize;
-    numdims = size(training_data,2);
-    numdims1 = size(targets_data,2);
-    % batchsize = 100;
-    batchdata = zeros(batchsize, numdims, numbatches);
-    batchtargets_data = zeros(batchsize, numdims1, numbatches);
-    for b = 1:numbatches
-        batchdata(:,:,b) = training_data(randomorder(1+(b-1)*batchsize:b*batchsize), :);
-        batchtargets_data(:,:,b) = targets_data(randomorder(1+(b-1)*batchsize:b*batchsize), :);
-    end;
-    rand('state',sum(100*clock));
-    randn('state',sum(100*clock));
-    %%%%%%%%%%%%%%%%%%%%%%%%%%% end makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % [numcases,numdims,numbatches]=size(batchdata);
-    % [~,numdims1,~]=size(batchtargets_data);
+    [hidtop,toprecbiases,topgenbiases] = rbmhl( numopen, batchposhidprobs);
+     
+    %% Back-propgation CG
     %%%%%%%%%%%%%%% PREINITIALIZE WEIGHTS OF THE AUTOENCODER %%%%%%%%%%%%%%
     w1=[vishid1; hidrecbiases];
     w2=[hidpen; penrecbiases];
@@ -544,23 +249,12 @@ targets_data = targets_data/255;
         img_fusion = imresize(pyramid_output_1{k},[rows, cols]);
         img_fusion_norm = (img_fusion-min(img_fusion(:)))/(max(img_fusion(:))-min(img_fusion(:)));
         saliency_map_ = saliency_map_+img_fusion_norm;
-        
-        %saliency_s = imresize(saliency_map_,[row_s,col_s],'bicubic');
-		%imwrite(mat2gray(saliency_s),sprintf('./result/center_%d_%d_%d_%d_out.jpg',k,each_image_patches,R,r));
     end
     
 %% 2. normlization
     saliency_map_ = (saliency_map_-min(saliency_map_(:)))/(max(saliency_map_(:))-min(saliency_map_(:)));
     saliency_map_ = exp(saliency_map_);
     saliency_map_ = double( ( saliency_map_ - min(saliency_map_(:)) ) / ( max(saliency_map_(:)) - min(saliency_map_(:)) ) * 255 );
-    saliency_s = saliency_map_;
-    saliency_s = imresize(saliency_s,[row_s,col_s],'bicubic');
-   % imwrite(mat2gray(saliency_s),sprintf('./result/center_%d_%d_%d_%d_normlization.jpg',k,each_image_patches,R,r));
-
-    
-%% ...    
-%     img_t = double(center);
-%     saliency_map_ = imresize(saliency_map_,[size(img_t,1),size(img_t,2)],'bicubic');
 
 %% 4. Restore the cubic images to equirectangular image
 w = 128;
@@ -572,10 +266,9 @@ sal2rgb(:, :, 3) = saliency_map_;
 saliency_map_ = sal2rgb;
 saliency_map_ = cubic2equi(saliency_map_(:,4*w+1:5*w, :), saliency_map_(:,5*w+1:6*w, :), saliency_map_(:,3*w+1:4*w, :), saliency_map_(:,w+1:2*w, :), saliency_map_(:,1:w, :), saliency_map_(:,2*w+1:3*w, :));
 saliency_map_ = saliency_map_(:, :, 1);
-[r,c,~] = size(saliency_map_);
-
-saliency_map_ = imresize(saliency_map_,[r, c]);
-saliency_map_ = imresize(saliency_map_,[input_h, input_w]);
+% [r,c,~] = size(saliency_map_);
+% saliency_map_ = imresize(saliency_map_,[r, c]);
+saliency_map_ = imresize(saliency_map_,[input_h, input_w], 'bicubic');
 
 % Add center bias
 mapSize = size(saliency_map_);
@@ -587,15 +280,8 @@ saliency_map_ = double(saliency_map_-min(saliency_map_(:)));
 saliency_map_ = saliency_map_/sum(saliency_map_(:));
 matOut = saliency_map_;
 
-% $$$ % figure;
-% $$$ % imshow(mat2gray(saliency_map_))
-% $$$ name = strtok(Files(number).name,'.');
-% $$$ imwrite(mat2gray(saliency_map_), sprintf('%sSHE_%s.jpg',out_path,name));
-% $$$ save(sprintf('%sSHE_%s.mat', out_path, name), 'saliency_map_');
-% $$$ fid = fopen(sprintf('%sSHE_%s.bin',out_path, name),'wb');
-% $$$ fwrite(fid,'saliency_map_','double');
-% $$$ disp(['Finishing ', Files(number).name])
-
+% figure;
+% imshow(mat2gray(saliency_map_))
 
 %=====================================================================
 %% HeadEyeSalMap.m ends here
