@@ -1,6 +1,6 @@
-function [vishid,hidbiases,visbiases] = rbmhl( numhid, batchdata)
+function [vishid,hidbiases,visbiases] = rbmhl(numhid, batchdata)
 
- %% rbmhidlinear;
+%% rbmhidlinear;
 maxepoch = 100;
 weightcost    = 0.0002;
 initialmomentum  = 0.5;
@@ -19,6 +19,7 @@ hidbiasinc = zeros(1,numhid);
 visbiasinc = zeros(1,numdims);
 sigmainc = zeros(1,numhid);
 batchposhidprobs = zeros(numcases,numhid,numbatches);
+
 for epoch = 1:maxepoch,
     for batch = 1:numbatches,
         %%%%%%%%% START POSITIVE PHASE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
