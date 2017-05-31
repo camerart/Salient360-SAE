@@ -2,8 +2,8 @@
 % Author: Fred Qi
 % Created: 2017-04-30 12:14:39(+0800)
 %
-% Last-Updated: 2017-05-30 12:26:41(+0800) [by Fred Qi]
-%     Update #: 24
+% Last-Updated: 2017-05-31 16:14:33(+0800) [by Fred Qi]
+%     Update #: 25
 
 %% Arguments:
 %    saliency_map: the saliency map to be saved.
@@ -19,7 +19,7 @@ function [saliency_filename] = save_saliency(saliency_map, ...
     saliency_filename = fullfile(output_path, [image_basename, suffix]);
     % disp(saliency_filename);
     fid = fopen(saliency_filename, 'wb');
-    fwrite(fid, saliency_map, 'double');
+    fwrite(fid, saliency_map', 'double');
     fclose(fid);
 end
 
