@@ -4,8 +4,8 @@
 % Author: Fred Qi
 % Created: 2013-05-30 11:13:19(+0800)
 %
-% Last-Updated: 2017-05-31 11:17:05(+0800) [by Fred Qi]
-%     Update #: 58
+% Last-Updated: 2017-05-31 11:26:59(+0800) [by Fred Qi]
+%     Update #: 64
 %=====================================================================
 %% Commentary:
 %  imgIn: the input equirectangular image organised in an RGB, 
@@ -43,7 +43,7 @@ center = horzcat(cubic{1:4});
 R = 7;
 r = 3;
 num = 10;
-each_image_patches = 20000;
+each_image_patches = 8000;
 batchsize = 100;
 
 maxepoch_bp = 10;
@@ -105,23 +105,16 @@ targets_data = targets_data/255;
     randn('state',sum(100*clock));
     %%%%%%%%%%%%%%%%%%%%%%%%%%% end makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    %% rbm;
+    %% RBM layerwise pretrain
     [vishid1,hidrecbiases,visbiases1,batchposhidprobs] = rbm( numhid1, batchdata);
-   
-    %% rbm;
     [hidpen,penrecbiases,hidgenbiases,batchposhidprobs] = rbm( numpen, batchposhidprobs);
-
-    %% rbm;
     [hidpen2,penrecbiases2,hidgenbiases2,batchposhidprobs] = rbm( numpen2, batchposhidprobs);
-
-    %% rbm;
     [hidpen3,penrecbiases3,hidgenbiases3,batchposhidprobs] = rbm( numpen3, batchposhidprobs);
-     
  
     %% rbmhidlinear;
     [hidtop,toprecbiases,topgenbiases] = rbmhl( numopen, batchposhidprobs);
      
-    %% backprop_cs;
+    %% Back-propgation CG
     %%%%%%%%%%%%%%% PREINITIALIZE WEIGHTS OF THE AUTOENCODER %%%%%%%%%%%%%%
     w1=[vishid1; hidrecbiases];
     w2=[hidpen; penrecbiases];
@@ -262,8 +255,8 @@ targets_data = targets_data/255;
     saliency_map_ = (saliency_map_-min(saliency_map_(:)))/(max(saliency_map_(:))-min(saliency_map_(:)));
     saliency_map_ = exp(saliency_map_);
     saliency_map_ = double( ( saliency_map_ - min(saliency_map_(:)) ) / ( max(saliency_map_(:)) - min(saliency_map_(:)) ) * 255 );
-    saliency_s = saliency_map_;
-    saliency_s = imresize(saliency_s,[row_s,col_s],'bicubic');
+    % saliency_s = saliency_map_;
+    % saliency_s = imresize(saliency_s,[row_s,col_s],'bicubic');
 
 %% 4. Restore the cubic images to equirectangular image
 w = 128;
@@ -276,9 +269,8 @@ sal2rgb(:, :, 3) = saliency_map_;
 saliency_map_ = sal2rgb;
 saliency_map_ = cubic2equi(top, bottom, saliency_map_(:,3*w+1:4*w, :), saliency_map_(:,w+1:2*w, :), saliency_map_(:,1:w, :), saliency_map_(:,2*w+1:3*w, :));
 saliency_map_ = saliency_map_(:, :, 1);
-[r,c,~] = size(saliency_map_);
-
-saliency_map_ = imresize(saliency_map_,[r, c]);
+% [r,c,~] = size(saliency_map_);
+% saliency_map_ = imresize(saliency_map_,[r, c]);
 saliency_map_ = imresize(saliency_map_,[input_h, input_w], 'bicubic');
 
 % add center bias

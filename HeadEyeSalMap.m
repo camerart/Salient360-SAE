@@ -4,8 +4,8 @@
 % Author: Fred Qi
 % Created: 2013-04-30 12:39:31(+0800)
 %
-% Last-Updated: 2017-05-31 11:13:34(+0800) [by Fred Qi]
-%     Update #: 29
+% Last-Updated: 2017-05-31 11:25:53(+0800) [by Fred Qi]
+%     Update #: 32
 %
 %=====================================================================
 %% Commentary:
@@ -249,7 +249,6 @@ targets_data = targets_data/255;
         img_fusion = imresize(pyramid_output_1{k},[rows, cols]);
         img_fusion_norm = (img_fusion-min(img_fusion(:)))/(max(img_fusion(:))-min(img_fusion(:)));
         saliency_map_ = saliency_map_+img_fusion_norm;
-        
     end
     
 %% 2. normlization
@@ -267,9 +266,8 @@ sal2rgb(:, :, 3) = saliency_map_;
 saliency_map_ = sal2rgb;
 saliency_map_ = cubic2equi(saliency_map_(:,4*w+1:5*w, :), saliency_map_(:,5*w+1:6*w, :), saliency_map_(:,3*w+1:4*w, :), saliency_map_(:,w+1:2*w, :), saliency_map_(:,1:w, :), saliency_map_(:,2*w+1:3*w, :));
 saliency_map_ = saliency_map_(:, :, 1);
-[r,c,~] = size(saliency_map_);
-
-saliency_map_ = imresize(saliency_map_,[r, c]);
+% [r,c,~] = size(saliency_map_);
+% saliency_map_ = imresize(saliency_map_,[r, c]);
 saliency_map_ = imresize(saliency_map_,[input_h, input_w], 'bicubic');
 
 % Add center bias
