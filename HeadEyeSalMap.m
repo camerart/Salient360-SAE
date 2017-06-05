@@ -4,14 +4,14 @@
 % Author: Fred Qi
 % Created: 2013-04-30 12:39:31(+0800)
 %
-% Last-Updated: 2017-05-30 12:52:39(+0800) [by Fred Qi]
-%     Update #: 15
+% Last-Updated: 2017-05-31 11:25:53(+0800) [by Fred Qi]
+%     Update #: 32
 %
 %=====================================================================
 %% Commentary:
 %  imgIn: the input equirectangular image organised in an RGB, 
 %         with size(imgIn) being [Height,Width,3].
-%  matOut: the output â€œdoubleâ€?matrix having the saliency values.
+%  matOut: the output "double" matrix having the saliency values.
 %          Its size is [Height,Width]
 %
 %=====================================================================
@@ -39,8 +39,6 @@ end
 
 % create cubic images
 cubic = equi2cubic(equi);
-
-
 center = horzcat(cubic{1:6});
 
 R = 7;
@@ -51,25 +49,12 @@ batchsize = 100;
 
 
 maxepoch_bp = 10;
-
 numhid1 = 512; numpen =256; numpen2 = 128; numpen3 = 64; numopen = 16;
-
-%parfor img_idx = 1:120
-    
 
 sur_patch_size = R*2+1;
 cen_patch_size = r*2+1;
 training_data = zeros(each_image_patches, sur_patch_size.^2*3);
 targets_data = zeros(each_image_patches, cen_patch_size.^2*3);
-    
-    % infilename = sprintf('Results_n3/%d+3.jpg', img_idx);
-    % img_exist = exist(infilename, 'file');
-    % if img_exist == 0
-    
-    % filename = sprintf('Bruce/%d.jpg', img_idx);
-    % filename = sprintf('/home/shenchong/work/saliency/Judd_all/%d.jpg', img_idx);
-	% filename = sprintf('Kootstra/%d.png', img_idx);
-	% filename = sprintf('NUSEF/%d.jpg', img_idx);
     
 img = double(center);
 [row_s,col_s,~] = size(img);
@@ -120,42 +105,16 @@ targets_data = targets_data/255;
     rand('state',sum(100*clock));
     randn('state',sum(100*clock));
     %%%%%%%%%%%%%%%%%%%%%%%%%%% end makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% rbm;
+
+    %% RBM layerwise pretrain
     [vishid1,hidrecbiases,visbiases1,batchposhidprobs] = rbm( numhid1, batchdata);
-   
-    %% rbm;
     [hidpen,penrecbiases,hidgenbiases,batchposhidprobs] = rbm( numpen, batchposhidprobs);
-
-    %% rbm;
     [hidpen2,penrecbiases2,hidgenbiases2,batchposhidprobs] = rbm( numpen2, batchposhidprobs);
-
-    %% rbm;
     [hidpen3,penrecbiases3,hidgenbiases3,batchposhidprobs] = rbm( numpen3, batchposhidprobs);
-     
- 
     %% rbmhidlinear;
     [hidtop,toprecbiases,topgenbiases] = rbmhl( numopen, batchposhidprobs);
      
-%     %% backprop_cs;
-%     %%%%%%%%%%%%%%%%%%%%%%%%%% begin makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%
-%     % totnum = size(training_data,1);
-%     rand('state',0);
-%     randomorder = randperm(totnum);
-%     numbatches = totnum/batchsize;
-%     numdims = size(training_data,2);
-%     numdims1 = size(targets_data,2);
-%     % batchsize = 100;
-%     batchdata = zeros(batchsize, numdims, numbatches);
-%     batchtargets_data = zeros(batchsize, numdims1, numbatches);
-%     for b = 1:numbatches
-%         batchdata(:,:,b) = training_data(randomorder(1+(b-1)*batchsize:b*batchsize), :);
-%         batchtargets_data(:,:,b) = targets_data(randomorder(1+(b-1)*batchsize:b*batchsize), :);
-%     end;
-%     rand('state',sum(100*clock));
-%     randn('state',sum(100*clock));
-%     %%%%%%%%%%%%%%%%%%%%%%%%%%% end makebatches %%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % [numcases,numdims,numbatches]=size(batchdata);
-    % [~,numdims1,~]=size(batchtargets_data);
+    %% Back-propgation CG
     %%%%%%%%%%%%%%% PREINITIALIZE WEIGHTS OF THE AUTOENCODER %%%%%%%%%%%%%%
     w1=[vishid1; hidrecbiases];
     w2=[hidpen; penrecbiases];
@@ -290,23 +249,12 @@ targets_data = targets_data/255;
         img_fusion = imresize(pyramid_output_1{k},[rows, cols]);
         img_fusion_norm = (img_fusion-min(img_fusion(:)))/(max(img_fusion(:))-min(img_fusion(:)));
         saliency_map_ = saliency_map_+img_fusion_norm;
-        
-        %saliency_s = imresize(saliency_map_,[row_s,col_s],'bicubic');
-		%imwrite(mat2gray(saliency_s),sprintf('./result/center_%d_%d_%d_%d_out.jpg',k,each_image_patches,R,r));
     end
     
 %% 2. normlization
     saliency_map_ = (saliency_map_-min(saliency_map_(:)))/(max(saliency_map_(:))-min(saliency_map_(:)));
     saliency_map_ = exp(saliency_map_);
     saliency_map_ = double( ( saliency_map_ - min(saliency_map_(:)) ) / ( max(saliency_map_(:)) - min(saliency_map_(:)) ) * 255 );
-    saliency_s = saliency_map_;
-    saliency_s = imresize(saliency_s,[row_s,col_s],'bicubic');
-   % imwrite(mat2gray(saliency_s),sprintf('./result/center_%d_%d_%d_%d_normlization.jpg',k,each_image_patches,R,r));
-
-    
-%% ...    
-%     img_t = double(center);
-%     saliency_map_ = imresize(saliency_map_,[size(img_t,1),size(img_t,2)],'bicubic');
 
 %% 4. Restore the cubic images to equirectangular image
 w = 128;
@@ -318,10 +266,9 @@ sal2rgb(:, :, 3) = saliency_map_;
 saliency_map_ = sal2rgb;
 saliency_map_ = cubic2equi(saliency_map_(:,4*w+1:5*w, :), saliency_map_(:,5*w+1:6*w, :), saliency_map_(:,3*w+1:4*w, :), saliency_map_(:,w+1:2*w, :), saliency_map_(:,1:w, :), saliency_map_(:,2*w+1:3*w, :));
 saliency_map_ = saliency_map_(:, :, 1);
-[r,c,~] = size(saliency_map_);
-
-saliency_map_ = imresize(saliency_map_,[r, c]);
-saliency_map_ = imresize(saliency_map_,[input_h, input_w]);
+% [r,c,~] = size(saliency_map_);
+% saliency_map_ = imresize(saliency_map_,[r, c]);
+saliency_map_ = imresize(saliency_map_,[input_h, input_w], 'bicubic');
 
 % Add center bias
 mapSize = size(saliency_map_);
@@ -333,15 +280,8 @@ saliency_map_ = double(saliency_map_-min(saliency_map_(:)));
 saliency_map_ = saliency_map_/sum(saliency_map_(:));
 matOut = saliency_map_;
 
-% $$$ % figure;
-% $$$ imshow(mat2gray(saliency_map_))
-% $$$ name = strtok(Files(number).name,'.');
-% $$$ imwrite(mat2gray(saliency_map_), sprintf('%sSHE_%s.jpg',out_path,name));
-% $$$ save(sprintf('%sSHE_%s.mat', out_path, name), 'saliency_map_');
-% $$$ fid = fopen(sprintf('%sSHE_%s.bin',out_path, name),'wb');
-% $$$ fwrite(fid,'saliency_map_','double');
-% $$$ disp(['Finishing ', Files(number).name])
-
+% figure;
+% imshow(mat2gray(saliency_map_))
 
 %=====================================================================
 %% HeadEyeSalMap.m ends here
